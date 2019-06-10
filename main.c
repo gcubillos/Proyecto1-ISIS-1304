@@ -2,9 +2,6 @@
 // EL GRUPO DEBE SER DESARROLLADO EN GRUPOS DE A 3 PERSONAS MAXIMO
 //
 // DESARROLLADO POR:
-// Gabriel Cubillos Bolivar - 201729365
-// Nombre - Código
-// Nombre - Código
 
 #define _CRT_SECURE_NO_DEPRECATE 
 #include <stdlib.h> 
@@ -116,8 +113,62 @@ int main(int argc, char* argv[]) {
 * parámetro mensaje: Apuntador a una cadena de caracteres con el mensaje.
 * parámetro n: Cantidad de bits del mensaje que se almacenarán en cada componente de color de cada pixel. 0 < n <= 8.
 */
-void insertarMensaje(Imagen* img, unsigned char mensaje[], int n) {
+void insertarMensaje(Imagen* img, unsigned char mensaje[], int n) 
+{
 	// TODO: Desarrollar OBLIGATORIAMENTE en su totalidad.
+
+	// Variable que representa la longitud del mensaje
+	int longitudMensaje = strlen(mensaje);
+
+	// Variable que contiene la información del mensaje.
+	char* caracteresMensaje = mensaje;
+
+	// Variable que contiene la información de la imagen
+	unsigned char* informacionImagen = img->informacion;
+
+	// Variable que representa el número de bytes que tiene la imagen
+	int numeroBytesImagen = img->alto * img->ancho;
+	
+	// Variable que representa 
+	int posMsg = 0; 
+
+	// Variable que indica si ya se terminó de escribir el mensaje
+	int seTermina = 1;
+
+
+	// Se itera sobre la información de la imagen
+	for (int i = 0; i < numeroBytesImagen && seTermina; i++)
+	{
+		// Variable que almacena el valor del caracter actual
+		unsigned char caracterActual = informacionImagen[i];
+
+		/* Corrimiento hacia la derecha para remover los bits menos significativos dependiendo de la
+		variable n*/
+		caracterActual = caracterActual >> n;
+
+		/*Corrimiento hacia la izquierda para poner los bits significativos en su lugar original y
+		dejar con un valor de 0 los bits menos significativos (lugar en el que va a ir el mensaje)*/
+		caracterActual = caracterActual << n;
+
+		// Revisa que el valor del bit sea correcto
+		if (!(i * n >= longitudMensaje * 8) || !(((i * n) + n) >= longitudMensaje * 8))
+		{
+			// Variable a la que se le asigna los bits que se van a insertar en el mensaje
+			unsigned char bitsParaInsertar = sacarNbits(caracteresMensaje, i * n, n);
+
+				// Se realiza un "or" de bit por bit que permite insertar los bits del mensaje en la imagen.
+				informacionImagen[i] = caracterActual | bitsParaInsertar;
+		}
+		else
+		{
+			seTermina = 0;
+		}
+	}
+
+	// Se actualiza la información de la imagen.
+	img->informacion = informacionImagen;
+
+	
 }
 
 /**
@@ -129,6 +180,77 @@ void insertarMensaje(Imagen* img, unsigned char mensaje[], int n) {
 */
 void leerMensaje(Imagen* img, unsigned char msg[], int l, int n) {
 	// TODO: Desarrollar OBLIGATORIAMENTE en su totalidad.
+
+	// Variable que contiene la información de la imagen
+	unsigned char* informacionImagen = img->informacion;
+
+	// Variable que contiene el número de bytes en el que se encuentra el mensaje
+	int tamMensaje = ((l * 8) / n)+1;
+
+	// Variable que indica el número de bits que se han ingresado en un caracter del mensaje
+	int numeroBitsMetidos = 0;
+
+	// Variable que indica el byte del mensaje en el que se ingresa la información
+	int byteActual = 0;
+
+	// Se itera sobre el tamaño de la imagen.
+	for (int i = 0; i < tamMensaje; i++)
+	{
+		// Variable que almacena el valor del caracter actual
+		unsigned char caracterActual = informacionImagen[i];
+
+		// Corrimiento hacia la izquierda que quita los bits que no hacen parte del mensaje 
+		caracterActual = caracterActual << 8 - n;
+		
+		/*Caso en el que ya se completa un caracter del mensaje a retornar, y todavía quedan bits
+		por escribir del caracter actual.*/
+		if ( (numeroBitsMetidos+n) >8)
+		{
+			// Se crea un caracter auxiliar que contiene la misma información del otro caracter
+			unsigned char caracterAuxiliar = caracterActual;
+
+			/* Se mira el byte del mensaje que se va a insertar y se realiza un "or" de bit por bit 
+			con los bits que siguen del mensaje contenido en el caracterActual (se realiza un 
+			corrimiento hacia la derecha por el número de bits que ya estaban ocupados en el mensaje). 
+			*/
+
+			caracterActual = caracterActual >> numeroBitsMetidos;
+			msg[byteActual] = msg[byteActual] | caracterActual;
+
+			// Se actualiza el valor de la variable debido a que ya se llenó un byte
+			byteActual++;
+
+			/* Se mira el byte siguiente del mensaje que se va a insertar  y se realiza un "or" de bit 
+			por bit con los bits que faltaban por insertar del mensaje contenido en el caracterActual 
+			(se realiza un corrimiento hacia la izquierda por el número de bits que ya se insertaron).
+			*/
+			caracterAuxiliar = caracterAuxiliar << (8 - numeroBitsMetidos);
+			msg[byteActual] = msg[byteActual] | caracterAuxiliar;
+
+		}
+		/* Caso en el que los bits codificados, los del mensaje a descifrar, caben en el byte correspondiente
+		del mensaje a retornar*/
+		else
+		{
+			// Corrimiento hacia la derecha dependiendo del número de bits ya ocupados en el byte a insertar
+			caracterActual = caracterActual >> numeroBitsMetidos;
+			msg[byteActual] = msg[byteActual] | caracterActual;
+
+		}
+		// Se modifica la variable para indicar el número de bits insertados.
+		numeroBitsMetidos += n;
+
+		/* Se pone la variable en un valor que es congruente con 8, dado que en este caso los bytes son
+		 de tamaño 8.*/
+		numeroBitsMetidos = numeroBitsMetidos % 8;
+
+		// Se revisa si ya se completó de llenar un byte
+		if (numeroBitsMetidos == 0)
+		{
+			byteActual++;
+		}
+
+	}
 }
 
 /**
@@ -141,6 +263,62 @@ void leerMensaje(Imagen* img, unsigned char msg[], int l, int n) {
 */
 unsigned char sacarNbits(unsigned char secuencia[], int bitpos, int n) {
 	// DESARROLLO OPCIONAL: Puede ser útil para el desarrollo de los procedimientos obligatorios.
+
+	// Variable que contiene la información de la secuencia
+	unsigned char* informacionSecuencia = secuencia;
+
+	// Variable que representa el número del byte en el que empieza la secuencia
+	// Se divide por 8 bitpos debido a que int redondea hacia abajo
+	int bytePosicionSecuencia = bitpos / 8;
+
+	// Variable que representa el número del bit en el que se empieza la secuencia.
+	// Se realiza módulo ocho para obtener el desplazamiento en el byte.
+	int bitPosicionSecuencia = bitpos % 8;
+
+	// Variable que obtiene la información del byte actual
+	unsigned char informacionByte = informacionSecuencia[bytePosicionSecuencia];
+
+	/* Corrimiento hacia la izquierda que deja únicamente los bits que nos interesan del mensaje.
+	Lo demás lo deja en 0.*/
+	informacionByte = informacionByte << bitPosicionSecuencia;
+
+	// Caso que revisa si la secuencia se encuentra en más de un byte
+	if ((bitPosicionSecuencia + n) > 8)
+	{
+		/* Variable que representa el número de bits a extraer que se encuentran en el primer byte
+		de la secuencia empezando desde bytePosicionSecuencia.*/
+		int numeroBitsPrimerByte = 8 - bitPosicionSecuencia;
+
+		/* Variable que representa el número de bits a extraer que se encuentran en el segundo byte
+		de la secuencia empezando desde bytePosicionSecuencia.*/
+		int numeroBitsSegundoByte = n - numeroBitsPrimerByte;
+
+		/* Corrimiento hacia la derecha que pone los bits que nos interesan en las posiciones más
+		significativas.*/
+		informacionByte = informacionByte >> (8 - n);
+
+		/* Variable que obtiene la información del byte siguiente en el que se encuentra el resto de la
+		información*/
+		unsigned char informacionByteSiguiente = informacionSecuencia[bytePosicionSecuencia+1];
+
+		/* Corrimiento hacia la derecha que pone los bits que nos interesan en las posiciones menos significativas.*/
+		informacionByteSiguiente = informacionByteSiguiente >> (8-numeroBitsSegundoByte);
+
+		// Se hace un "or" bit a bit para concatenar los valores de la información del byte.
+		informacionByte = informacionByte | informacionByteSiguiente;
+
+
+	}
+	// Caso en el que la secuencia se encuentre en un único byte
+	else
+	{
+		/* Corrimiento hacia la derecha que pone los bits que nos interesan en las posiciones menos
+		significativas.*/
+		informacionByte = informacionByte >> (8 - n);
+	}
+
+	return informacionByte;
+
 }
 
 // Lee un archivo en formato BMP y lo almacena en la estructura img
